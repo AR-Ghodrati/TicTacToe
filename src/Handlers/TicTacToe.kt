@@ -1,11 +1,10 @@
+package Handlers
+
+import Listeners.StateListener
+import Models.Move
+
 class TicTacToe {
 
-
-    private class Move {
-
-        internal var row: Int = 0
-        internal var col: Int = 0
-    }
 
     private fun isMovesLeft(board: Array<CharArray>): Boolean {
         return board.any { chars -> chars.any { char -> char == '_' } }
@@ -143,6 +142,12 @@ class TicTacToe {
 
         private val player = 'x'
         private val opponent = 'o'
+        private var win = false
+
+        private lateinit var board: Array<CharArray>
+        private lateinit var game: TicTacToe
+        private lateinit var listener: StateListener
+
 
         private fun isEnd(board: Array<CharArray>): Pair<Boolean, Char> {
 
@@ -179,6 +184,10 @@ class TicTacToe {
 
             return false to '@'
 
+        }
+
+        private fun isDraw(board: Array<CharArray>): Boolean {
+            return !board.any { chars -> chars.any { char -> char == '_' } }
         }
 
         private fun print(board: Array<CharArray>) {
@@ -243,41 +252,45 @@ class TicTacToe {
         }
 
 
-        @JvmStatic
-        fun main(args: Array<String>) {
+        fun run(_listener: StateListener) {
+            board = generateBoard(3)
+            game = TicTacToe()
+            listener = _listener
+            win = false
+        }
+
+        fun move(playerMove: Move) {
+
+            if (!win) {
+                //val input = getInputFromPlayer()
+                try {
+                    if (canUseThePlace(board, playerMove.row to playerMove.col)) {
+                        board[playerMove.row][playerMove.col] = 'x'
+                        listener.onStateChange(playerMove, 'X')
 
 
-            val board = generateBoard(3)
+                        val move: Move = game.findBestMove(board)
+                        board[move.row][move.col] = 'o'
+                        listener.onStateChange(move, 'O')
+                        println("opponent Selected!!")
 
 
-            val test = TicTacToe()
-            var move: Move
-
-            for (i in 0..8) {
-
-                if (i % 2 == 0) {
-                    while (true) {
-                        val input = getInputFromPlayer()
-                        if (canUseThePlace(board, input)) {
-                            board[input.first][input.second] = 'x'
-                            break
-                        } else
-                            println("Enter a Another Place!!")
-                    }
-                } else {
-                    move = test.findBestMove(board)
-                    board[move.row][move.col] = 'o'
-                    println("opponent Selected!!")
+                        val end = isEnd(board)
+                        if (end.first) {
+                            print(board)
+                            println("${end.second} Win!!")
+                            listener.onDone(end.second.toUpperCase())
+                            win = true
+                        }
+                        print(board)
+                    } else
+                        println("Enter a Another Place!!")
+                } catch (e: Exception) {
+                    if (isDraw(board))
+                        listener.onDone('@')
                 }
-
-                val end = isEnd(board)
-                if (end.first) {
-                    print(board)
-                    println("${end.second} Win!!")
-                    break
-                }
-                print(board)
-            }
+            } else
+                println("Game Finished!! , Restart Game")
         }
     }
 }
