@@ -12,28 +12,27 @@ import java.awt.event.ActionListener;
 
 public class GUI extends JFrame implements StateListener, ActionListener {
 
-    private JPanel boardPanel;
-    private JButton[][] button = new JButton[3][3];
+    private JPanel boardPanel, upPanel;
+    private JButton[][] button;
     private JLabel tvResult;
     private JButton Reset;
+    private JTextField InputSize;
+
+    private int boardSize = 3;
+    private boolean isReset = false;
 
 
     public GUI() {
 
         intiObject();
-        addToPanel();
         displayGUI();
 
-        add(boardPanel, BorderLayout.CENTER);
-        add(tvResult, BorderLayout.SOUTH);
-        add(Reset, BorderLayout.NORTH);
-
-        TicTacToe.Companion.run(this);
+        add(upPanel, BorderLayout.NORTH);
     }
 
     private void displayGUI() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(500, 500);
+        setSize(700, 700);
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
         setTitle("Tic-Tac-Toe");
@@ -41,17 +40,17 @@ public class GUI extends JFrame implements StateListener, ActionListener {
     }
 
     private void intiObject() {
-        boardPanel = new JPanel();
-        boardPanel.setLayout(new GridLayout(3, 3));
-        tvResult = new JLabel("Game Is Running!!");
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++) {
-                button[i][j] = new JButton("");
-                button[i][j].addActionListener(this);
-                button[i][j].setFocusPainted(false);
-            }
 
-        Reset = new JButton("Reset the Game");
+        upPanel = new JPanel();
+        upPanel.setLayout(new GridLayout(1, 2));
+
+        JLabel label = new JLabel("Enter Board Size:");
+        upPanel.add(label);
+
+        InputSize = new JFormattedTextField();
+        upPanel.add(InputSize);
+
+        Reset = new JButton("Start Game");
         Reset.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -59,33 +58,81 @@ public class GUI extends JFrame implements StateListener, ActionListener {
             }
         });
         Reset.setFocusPainted(false);
+        upPanel.add(Reset);
 
     }
 
     private void addToPanel() {
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
+
+        boardPanel.removeAll();
+
+        for (int i = 0; i < boardSize; i++)
+            for (int j = 0; j < boardSize; j++)
                 boardPanel.add(button[i][j]);
     }
 
 
     private void resetTheGame() {
-        for (JButton[] jButton : button) {
-            for (JButton button : jButton) {
-                button.setText("");
-                button.setEnabled(true);
-                button.setBackground(null);
+        if (isReset) {
+
+            for (JButton[] jButton : button) {
+                for (JButton button : jButton) {
+                    button.setText("");
+                    button.setEnabled(true);
+                    button.setBackground(null);
+                }
             }
+
+            tvResult.setText("Game Is Running!!");
+            tvResult.setForeground(Color.BLACK);
+            Reset.setText("Play Game");
+            isReset = false;
+            boardPanel.setVisible(false);
+        } else {
+            Reset.setText("Reset The Game");
+
+            boardSize = Integer.parseInt(InputSize.getText());
+
+            isReset = true;
+
+            boardPanel = new JPanel();
+            boardPanel.setLayout(new GridLayout(boardSize, boardSize));
+
+            if (tvResult == null) {
+                tvResult = new JLabel("Game Is Running!!");
+                add(tvResult, BorderLayout.SOUTH);
+            }
+
+
+            button = null;
+            button = new JButton[boardSize][boardSize];
+            for (int i = 0; i < boardSize; i++)
+                for (int j = 0; j < boardSize; j++) {
+                    button[i][j] = new JButton("");
+                    button[i][j].addActionListener(this);
+                    button[i][j].setFocusPainted(false);
+                    button[i][j].setFont(new Font("Arial", Font.BOLD, 40));
+                }
+
+            remove(boardPanel);
+            add(boardPanel, BorderLayout.CENTER);
+            addToPanel();
+            boardPanel.setVisible(true);
+
+            TicTacToe.Companion.run(boardSize - 1, this);
         }
-
-        tvResult.setText("Game Is Running!!");
-        tvResult.setForeground(Color.BLACK);
-
-        TicTacToe.Companion.run(this);
     }
 
     @Override
     public void onStateChange(Move move, char player) {
+        System.out.println("Player : " + player + ", Selected : " + move);
+
+        if (player == TicTacToe.player)
+            button[move.getRow$TicTacToe()]
+                    [move.getCol$TicTacToe()].setForeground(Color.GREEN);
+        else button[move.getRow$TicTacToe()]
+                [move.getCol$TicTacToe()].setForeground(Color.RED);
+
         button[move.getRow$TicTacToe()]
                 [move.getCol$TicTacToe()].setText(player + "");
     }
@@ -93,10 +140,10 @@ public class GUI extends JFrame implements StateListener, ActionListener {
     @Override
     public void onDone(char winner) {
 
-        if (winner == 'O') {
+        if (winner == TicTacToe.opponent) {
             tvResult.setForeground(Color.RED);
             tvResult.setText("Computer Win!!");
-        } else if (winner == 'X') {
+        } else if (winner == TicTacToe.player) {
             tvResult.setForeground(Color.GREEN);
             tvResult.setText("You Win!!");
         } else {
@@ -107,13 +154,12 @@ public class GUI extends JFrame implements StateListener, ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
                 if (button[i][j] == e.getSource()) {
                     Move m = new Move();
                     m.setRow$TicTacToe(i);
                     m.setCol$TicTacToe(j);
-                    System.out.println(m);
                     TicTacToe.Companion.move(m);
                     break;
                 }

@@ -6,106 +6,76 @@ import Models.Move
 class TicTacToe {
 
 
-    private fun isMovesLeft(board: Array<CharArray>): Boolean {
-        return board.any { chars -> chars.any { char -> char == '_' } }
+    private fun getChildren(): MutableList<Pair<Int, Int>> {
+        val children: MutableList<Pair<Int, Int>> = ArrayList()
+        board.forEachIndexed { index, chars ->
+            chars.forEachIndexed { indexC, c ->
+                if (c == '_') children.add(index to indexC)
+            }
+        }
+        return children
     }
 
-    private fun evaluate(board: Array<CharArray>, depth: Int): Int {
-
-        // Check Rows
-        for (row in 0..2) {
-            if (board[row][0] == board[row][1] && board[row][1] == board[row][2]) {
-                if (board[row][0] == player)
-                    return 10 - depth
-                else if (board[row][0] == opponent)
-                    return -10 + depth
-            }
+    private fun isLeaf(depth: Int): Pair<Boolean, Int> {
+        val end = isEnd(board)
+        return if (end.first) {
+            if (end.second == player) true to getHeuristicValue(depth, true)
+            else true to getHeuristicValue(depth, false)
+        } else {
+            if (isDraw(board))
+                true to 0
+            else false to Int.MIN_VALUE
         }
+    }
 
-        // Check Cols
-        for (col in 0..2) {
-            if (board[0][col] == board[1][col] && board[1][col] == board[2][col]) {
-                if (board[0][col] == player)
-                    return 10 - depth
-                else if (board[0][col] == opponent)
-                    return -10 + depth
-            }
-        }
-
-        // Check Diagonals
-
-        if (board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
-            if (board[0][0] == player)
-                return 10 - depth
-            else if (board[0][0] == opponent)
-                return -10 + depth
-        }
-
-        if (board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
-            if (board[0][2] == player)
-                return 10 - depth
-            else if (board[0][2] == opponent)
-                return -10 + depth
-        }
-
-        // is Draw
-        return 0
+    private fun getHeuristicValue(depth: Int, isPlayer: Boolean): Int {
+        return if (isPlayer) 10 - depth
+        else -(10 - depth)
     }
 
     private fun minimax(board: Array<CharArray>, depth: Int, alpha: Int, beta: Int, isMax: Boolean): Int {
 
         var _alpha = alpha
         var _beta = beta
+        var best: Int
 
-        val score = evaluate(board, depth)
+        val leaf = isLeaf(depth)
+        if (leaf.first)
+            return leaf.second
 
-        if (score > 0 || score < 0)
-            return score
-
-        if (!isMovesLeft(board))
-            return 0
 
         if (isMax) {
-            var best = Integer.MIN_VALUE
+            best = Integer.MIN_VALUE
 
-            for (i in 0..2) {
-                for (j in 0..2) {
-                    if (board[i][j] == '_') {
+            for (child in getChildren()) {
 
-                        board[i][j] = player
+                board[child.first][child.second] = player
 
-                        best = Math.max(best, minimax(board, depth + 1, _alpha, _beta, false))
-                        _alpha = Math.max(_alpha, best)
+                best = Math.max(best, minimax(board, depth + 1, _alpha, _beta, false))
+                _alpha = Math.max(_alpha, best)
 
-                        board[i][j] = '_'
+                board[child.first][child.second] = '_'
 
-                        if (_beta <= _alpha)
-                            break
-                    }
-                }
+                if (_beta <= _alpha) break
             }
-            return best
+
         } else {
-            var best = Integer.MAX_VALUE
 
-            for (i in 0..2) {
-                for (j in 0..2) {
+            best = Integer.MAX_VALUE
 
-                    if (board[i][j] == '_') {
-                        board[i][j] = opponent
+            for (child in getChildren()) {
 
-                        best = Math.min(best, minimax(board, depth + 1, _alpha, _beta, true))
-                        _beta = Math.min(_beta, best)
+                board[child.first][child.second] = opponent
 
-                        board[i][j] = '_'
+                best = Math.min(best, minimax(board, depth + 1, _alpha, _beta, true))
+                _beta = Math.min(_beta, best)
 
-                        if (_beta <= _alpha)
-                            break
-                    }
-                }
+                board[child.first][child.second] = '_'
+
+                if (_beta <= _alpha) break
             }
-            return best
         }
+        return best
     }
 
     private fun findBestMove(board: Array<CharArray>): Move {
@@ -116,8 +86,8 @@ class TicTacToe {
         bestMove.row = -1
         bestMove.col = -1
 
-        for (i in 0..2) {
-            for (j in 0..2) {
+        for (i in 0..BoardSize) {
+            for (j in 0..BoardSize) {
 
                 if (board[i][j] == '_') {
 
@@ -140,9 +110,13 @@ class TicTacToe {
 
     companion object {
 
-        private val player = 'x'
-        private val opponent = 'o'
+        const val player = 'X'
+        const val opponent = 'O'
+
         private var win = false
+        private var BoardSize = 2
+        lateinit var buffer: MutableList<Char>
+
 
         private lateinit var board: Array<CharArray>
         private lateinit var game: TicTacToe
@@ -151,36 +125,42 @@ class TicTacToe {
 
         private fun isEnd(board: Array<CharArray>): Pair<Boolean, Char> {
 
-            for (row in 0..2) {
-                if (board[row][0] == board[row][1] && board[row][1] == board[row][2]) {
-                    if (board[row][1] == player)
-                        return true to player
-                    else if (board[row][1] == opponent)
-                        return true to opponent
-                }
-            }
-
-            for (col in 0..2) {
-                if (board[0][col] == board[1][col] && board[1][col] == board[2][col]) {
-                    if (board[1][col] == player)
-                        return true to player
-                    else if (board[1][col] == opponent)
-                        return true to opponent
-                }
-            }
-
-            if (board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
-                if (board[1][1] == player)
+            // Check Rows
+            for (row in 0..BoardSize) {
+                if (board[row].all { it == player })
                     return true to player
-                else if (board[1][1] == opponent)
+                else if (board[row].all { it == opponent })
                     return true to opponent
             }
 
-            if (board[0][2] == board[1][1] && board[1][1] == board[2][0])
-                if (board[1][1] == player)
+
+            // Check Cols
+            for (col in 0..BoardSize) {
+                if (board.all { it[col] == player })
                     return true to player
-                else if (board[1][1] == opponent)
+                else if (board.all { it[col] == opponent })
                     return true to opponent
+            }
+
+
+            // Check Diagonals
+            buffer.clear()
+            for (i in 0..BoardSize)
+                buffer.add(i, board[i][i])
+
+            if (buffer.all { it == player })
+                return true to player
+            else if (buffer.all { it == opponent })
+                return true to opponent
+
+            buffer.clear()
+            for (i in 0..BoardSize)
+                buffer.add(i, board[BoardSize - i][i])
+
+            if (buffer.all { it == player })
+                return true to player
+            else if (buffer.all { it == opponent })
+                return true to opponent
 
             return false to '@'
 
@@ -191,21 +171,17 @@ class TicTacToe {
         }
 
         private fun print(board: Array<CharArray>) {
-            for (row in 0 until 3) {
-                for (col in 0 until 3)
-                    print(board[row][col] + "    ")
-                println()
+            board.forEach { chars ->
+                println(chars)
             }
-
-            println("\n*** *** ***")
         }
 
-        private fun generateBoard(size: Int): Array<CharArray> {
+        private fun generateBoard(): Array<CharArray> {
             val board: MutableList<CharArray> = ArrayList()
 
-            for (i in 0 until size) {
-                val array = CharArray(size)
-                for (j in 0 until size)
+            for (i in 0..BoardSize) {
+                val array = CharArray(BoardSize + 1)
+                for (j in 0..BoardSize)
                     array[j] = '_'
                 board.add(i, array)
             }
@@ -220,69 +196,39 @@ class TicTacToe {
             return true
         }
 
-        private fun getInputFromPlayer(): Pair<Int, Int> {
 
-            val c: Int
-            val r: Int
-
-            while (true) {
-                print("Enter the Row : ")
-                val row = readLine()!!.toInt()
-                if (row !in 1..3)
-                    println("Enter Row in 1..3 range!!")
-                else {
-                    r = row
-                    break
-                }
-            }
-
-            while (true) {
-                print("Enter the Column : ")
-                val col = readLine()!!.toInt()
-                if (col !in 1..3)
-                    println("Enter Column in 1..3 range!!")
-                else {
-                    c = col
-                    break
-                }
-            }
-
-
-            return r - 1 to c - 1
-        }
-
-
-        fun run(_listener: StateListener) {
-            board = generateBoard(3)
+        fun run(_BoardSize: Int, _listener: StateListener) {
+            BoardSize = _BoardSize
+            board = generateBoard()
             game = TicTacToe()
             listener = _listener
+            buffer = ArrayList()
             win = false
         }
 
         fun move(playerMove: Move) {
 
             if (!win) {
-                //val input = getInputFromPlayer()
                 try {
                     if (canUseThePlace(board, playerMove.row to playerMove.col)) {
-                        board[playerMove.row][playerMove.col] = 'x'
-                        listener.onStateChange(playerMove, 'X')
+                        board[playerMove.row][playerMove.col] = player
+                        listener.onStateChange(playerMove, player)
 
 
                         val move: Move = game.findBestMove(board)
-                        board[move.row][move.col] = 'o'
-                        listener.onStateChange(move, 'O')
-                        println("opponent Selected!!")
+
+                        board[move.row][move.col] = opponent
+                        listener.onStateChange(move, opponent)
 
 
                         val end = isEnd(board)
                         if (end.first) {
-                            print(board)
+                            // print(board)
                             println("${end.second} Win!!")
                             listener.onDone(end.second.toUpperCase())
                             win = true
                         }
-                        print(board)
+                        //print(board)
                     } else
                         println("Enter a Another Place!!")
                 } catch (e: Exception) {
